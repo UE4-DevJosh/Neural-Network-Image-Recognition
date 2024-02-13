@@ -3,6 +3,7 @@ import nnfs
 from nnfs.datasets import spiral_data
 
 import matplotlib.pyplot as plt
+import tensorflow as tf
 from keras.datasets import mnist
 
 nnfs.init()
@@ -219,25 +220,44 @@ class Optimizer_Adam:
 
 X, y = spiral_data(samples=100, classes=3)
 
-#print(X.shape)
-#print(y.shape)
+print(y[0])
 
-#(X, y), (test_X, test_y) = mnist.load_data()
+# print(X.shape)
+# print(y.shape)
 
-#print(X.shape)
+(X, y), (test_X, test_y) = mnist.load_data()
 
-dense1 = Dense_Layer(784, 200)
+newX = np.zeros((300,784))
+newY = np.zeros(300).astype(int)
+
+for i in range(300):
+    print(i)
+    newY[i] = int(y[i])
+    temporary = np.zeros(784)
+    for j in range(len(X[i])):
+        for k in range(len(X[i, j])):
+            temporary[k + 28*j] = (X[i, j, k]) / 255
+    newX[i] = temporary
+
+X = newX
+y = newY
+
+print(y[0])
+
+#dense1 = Dense_Layer(2, 64)
+dense1 = Dense_Layer(784, 728)
 activation1 = ReLU()
 
-dense2 = Dense_Layer(200, 10)
+#dense2 = Dense_Layer(64, 3)
+dense2 = Dense_Layer(728, 10)
 loss_activation = SoftmaxLossCategoricalCrossentropyLoss()
 
 #optimizer = Optimizer_SGD(learning_rate=1.0, decay=1e-3, momentum=0.9)
-optimizer = Optimizer_Adam(learning_rate=0.05, decay=5e-7)
+optimizer = Optimizer_Adam(learning_rate=0.005, decay=5e-7)
 
 for epoch in range(10001):
 
-
+#Need to split up the batches and use them for the different training. Maybe do 6 batches for 60000
 
     dense1.forwardPass(X)
     activation1.f(dense1.output)
