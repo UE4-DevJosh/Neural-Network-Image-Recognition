@@ -218,69 +218,106 @@ class Optimizer_Adam:
     def post_update_params(self):
         self.iterations += 1
 
-X, y = spiral_data(samples=100, classes=3)
-
-print(y[0])
-
-# print(X.shape)
-# print(y.shape)
-
+# Load Data From MNIST Dataset
 (X, y), (test_X, test_y) = mnist.load_data()
 
-newX = np.zeros((300,784))
-newY = np.zeros(300).astype(int)
+baseDimX, baseDimY = 60000, 784
 
-for i in range(300):
-    print(i)
-    newY[i] = int(y[i])
-    temporary = np.zeros(784)
-    for j in range(len(X[i])):
-        for k in range(len(X[i, j])):
-            temporary[k + 28*j] = (X[i, j, k]) / 255
-    newX[i] = temporary
+# Batch Size of Training. Total Epoch Number will be total length divided by batchSize
+batchSize = 128
+totalEpochNumber = int(baseDimX / batchSize)
 
-X = newX
-y = newY
+newX = np.zeros((totalEpochNumber, batchSize, 784))
+newY = np.zeros((totalEpochNumber, batchSize))
 
-print(y[0])
+# # Looping through each MNIST training and test data
+# for i in range(baseDimX):
 
-#dense1 = Dense_Layer(2, 64)
-dense1 = Dense_Layer(784, 728)
+#     epochNumber = int(i / batchSize)
+#     batchNumber = int(i % batchSize)
+
+#     if (epochNumber) >= totalEpochNumber:
+#         break
+
+#     print(f"Epoch {epochNumber}, Batch {batchNumber}")
+
+#     # Array to hold one number
+#     temporary = np.zeros(784)
+
+#     for j in range(len(X[i])):
+#         for k in range(len(X[i, j])):
+#             # Normalize by dividing to 255
+#             temporary[k + 28*j] = (X[i, j, k]) / 255
+
+#     newX[epochNumber, batchNumber] = temporary
+#     newY[epochNumber, batchNumber] = y[i]
+
+# X = newX
+# # Must be an integer since the array will be one-hot values
+# y = newY.astype(int)
+
+# np.save('x.npy', X)
+# np.save('y.npy', y)
+
+X = np.load('x.npy')
+y = np.load('y.npy')
+
+dense1 = Dense_Layer(784, 512)
 activation1 = ReLU()
 
-#dense2 = Dense_Layer(64, 3)
-dense2 = Dense_Layer(728, 10)
+dense2 = Dense_Layer(512, 256)
+activation2 = ReLU()
+
+dense3 = Dense_Layer(256, 128)
+activation3 = ReLU()
+
+dense4 = Dense_Layer(128, 10)
 loss_activation = SoftmaxLossCategoricalCrossentropyLoss()
 
-#optimizer = Optimizer_SGD(learning_rate=1.0, decay=1e-3, momentum=0.9)
-optimizer = Optimizer_Adam(learning_rate=0.005, decay=5e-7)
+#optimizer = Optimizer_SGD(learning_rate=1e-4, decay=1e-3, momentum=0.9)
+optimizer = Optimizer_Adam(learning_rate=0.0005, decay=5e-7)
 
-for epoch in range(10001):
+print(X[1], y[1])
 
-#Need to split up the batches and use them for the different training. Maybe do 6 batches for 60000
+for epoch in range(totalEpochNumber):
 
-    dense1.forwardPass(X)
+    currentX, currentY = X[epoch], y[epoch]
+
+    dense1.forwardPass(currentX)
     activation1.f(dense1.output)
 
     dense2.forwardPass(activation1.output)
-    loss = loss_activation.f(dense2.output, y)
+    activation2.f(dense2.output)
+
+    dense3.forwardPass(activation2.output)
+    activation3.f(dense3.output)
+
+    dense4.forwardPass(activation3.output)
+    loss = loss_activation.f(dense4.output, currentY)
 
     predictions = np.argmax(loss_activation.output, axis=1)
+    
+    accuracy = np.mean(predictions == currentY)
 
-    if len(y.shape) == 2:
-        y = np.argmax(y, axis=1)
+    loss_activation.backward(loss_activation.output, currentY)
+    dense4.backwardPass(loss_activation.dinputs)
 
-    accuracy = np.mean(predictions == y)
+    activation3.backward(dense4.dinputs)
+    dense3.backwardPass(activation3.dinputs)
 
-    if not epoch % 100:
-        print(f'epoch: {epoch}, acc: {accuracy}, loss: {loss}, lr: {optimizer.current_learning_rate}')
+    activation2.backward(dense3.dinputs)
+    dense2.backwardPass(activation2.dinputs)
 
-    loss_activation.backward(loss_activation.output, y)
-    dense2.backwardPass(loss_activation.dinputs)
     activation1.backward(dense2.dinputs)
     dense1.backwardPass(activation1.dinputs)
 
     optimizer.pre_update_params()
     optimizer.update_params(dense1)
     optimizer.update_params(dense2)
+    optimizer.update_params(dense3)
+    optimizer.update_params(dense4)
     optimizer.post_update_params()
+
+    if not epoch % 10:
+        print(f'epoch: {epoch}, acc: {accuracy}, loss: {loss}, lr: {optimizer.current_learning_rate}')
+
