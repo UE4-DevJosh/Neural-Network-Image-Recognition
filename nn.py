@@ -218,28 +218,40 @@ class Optimizer_Adam:
     def post_update_params(self):
         self.iterations += 1
 
+def showPlot(currentX, currentY, currentOutput):
+    for x in range(min(5, batchSize)):
+        plt.imshow((currentX[x]*255).reshape(28, 28), cmap='gray')
+        plt.title(f"Guess: {np.round(currentOutput[x],2)} Correct: {currentY[x]}")
+        plt.show()
+
 # Load Data From MNIST Dataset
-(X, y), (test_X, test_y) = mnist.load_data()
+#(X, y), (test_X, test_y) = mnist.load_data()
 
 baseDimX, baseDimY = 60000, 784
 
 # Batch Size of Training. Total Epoch Number will be total length divided by batchSize
-batchSize = 128
-totalEpochNumber = int(baseDimX / batchSize)
 
-newX = np.zeros((totalEpochNumber, batchSize, 784))
-newY = np.zeros((totalEpochNumber, batchSize))
+batchSize = 128
+testingDataSize = 12800
+testingTotalEpochNumber = int(testingDataSize / batchSize)
+trainingTotalEpochNumber = int((baseDimX-testingDataSize) / batchSize)
+
+# trainingX = np.zeros((trainingTotalEpochNumber, batchSize, 784))
+# trainingY = np.zeros((trainingTotalEpochNumber, batchSize))
+
+# testingX = np.zeros((testingTotalEpochNumber, batchSize, 784))
+# testingY = np.zeros((testingTotalEpochNumber, batchSize))
 
 # # Looping through each MNIST training and test data
-# for i in range(baseDimX):
+# for i in range(baseDimX - testingDataSize):
 
 #     epochNumber = int(i / batchSize)
 #     batchNumber = int(i % batchSize)
 
-#     if (epochNumber) >= totalEpochNumber:
+#     if (epochNumber) >= trainingTotalEpochNumber:
 #         break
 
-#     print(f"Epoch {epochNumber}, Batch {batchNumber}")
+#     print(f"Training Epoch {epochNumber}, Batch {batchNumber}")
 
 #     # Array to hold one number
 #     temporary = np.zeros(784)
@@ -249,37 +261,68 @@ newY = np.zeros((totalEpochNumber, batchSize))
 #             # Normalize by dividing to 255
 #             temporary[k + 28*j] = (X[i, j, k]) / 255
 
-#     newX[epochNumber, batchNumber] = temporary
-#     newY[epochNumber, batchNumber] = y[i]
+#     trainingX[epochNumber, batchNumber] = temporary
+#     trainingY[epochNumber, batchNumber] = y[i]
 
-# X = newX
+# for i in range(testingDataSize):
+#      epochNumber = int(i / batchSize)
+#      batchNumber = int(i % batchSize)
+
+#      if (epochNumber) >= testingTotalEpochNumber:
+#          break
+     
+#      print(f"Testing Epoch {epochNumber}, Batch {batchNumber}")
+#      temporary = np.zeros(784)
+
+#      for j in range(len(X[i+(baseDimX-testingDataSize-1)])):
+#          for k in range(len(X[i+(baseDimX-testingDataSize-1), j])):
+#              # Normalize by dividing to 255
+#              temporary[k + 28*j] = (X[i+(baseDimX-testingDataSize-1), j, k]) / 255
+
+#      testingX[epochNumber, batchNumber] = temporary
+#      testingY[epochNumber, batchNumber] = y[i+(baseDimX-testingDataSize-1)]
+
+# X = trainingX
 # # Must be an integer since the array will be one-hot values
-# y = newY.astype(int)
+# y = trainingY.astype(int)
+
+# testingY = testingY.astype(int)
 
 # np.save('x.npy', X)
 # np.save('y.npy', y)
+# np.save('xtesting.npy', testingX)
+# np.save('ytesting.npy', testingY)
 
 X = np.load('x.npy')
 y = np.load('y.npy')
+testingX = np.load('xtesting.npy')
+testingY = np.load('ytesting.npy')
 
-dense1 = Dense_Layer(784, 512)
+dense1 = Dense_Layer(784, 256)
 activation1 = ReLU()
 
-dense2 = Dense_Layer(512, 256)
+dense2 = Dense_Layer(256, 128)
 activation2 = ReLU()
 
-dense3 = Dense_Layer(256, 128)
+dense3 = Dense_Layer(128, 64)
 activation3 = ReLU()
 
-dense4 = Dense_Layer(128, 10)
+dense4 = Dense_Layer(64, 10)
 loss_activation = SoftmaxLossCategoricalCrossentropyLoss()
 
-#optimizer = Optimizer_SGD(learning_rate=1e-4, decay=1e-3, momentum=0.9)
-optimizer = Optimizer_Adam(learning_rate=0.0005, decay=5e-7)
+#optimizer = Optimizer_SGD(learning_rate=1, decay=1e-3, momentum=0.9)
+optimizer = Optimizer_Adam(learning_rate=0.005, decay=5e-7)
 
-print(X[1], y[1])
+# Arrays for the MatPlotLib
+accuracyArray = np.zeros(trainingTotalEpochNumber)
+lossArray = np.zeros(trainingTotalEpochNumber)
+learningRateArray = np.zeros(trainingTotalEpochNumber)
+epochArray = np.zeros(trainingTotalEpochNumber)
 
-for epoch in range(totalEpochNumber):
+# Show the graph of the current Epoch training data plot every # of epoch 
+showNumbersEpochInterval = 100
+
+for epoch in range(trainingTotalEpochNumber):
 
     currentX, currentY = X[epoch], y[epoch]
 
@@ -318,6 +361,78 @@ for epoch in range(totalEpochNumber):
     optimizer.update_params(dense4)
     optimizer.post_update_params()
 
-    if not epoch % 10:
-        print(f'epoch: {epoch}, acc: {accuracy}, loss: {loss}, lr: {optimizer.current_learning_rate}')
+    accuracyArray[epoch] = accuracy
+    lossArray[epoch] = loss
+    learningRateArray[epoch] = optimizer.current_learning_rate
+    epochArray[epoch] = epoch
 
+    if (epoch % showNumbersEpochInterval) == 0:
+        print(f'epoch: {epoch}, acc: {accuracy}, loss: {loss}, lr: {optimizer.current_learning_rate}')
+        #showPlot(currentX=currentX, currentY=currentY, currentOutput=loss_activation.output)
+
+# Test Data
+
+fig, axs = plt.subplots(2, 2)
+axs[0, 0].plot(epochArray, accuracyArray)
+axs[0, 0].set_title("Epoch Number vs Accuracy")
+axs[0, 0].set(xlabel='Epoch Number', ylabel='Accuracy', ylim=(0,1.1))
+
+axs[0, 1].plot(epochArray, lossArray)
+axs[0, 1].set_title("Epoch Number vs Loss")
+axs[0, 1].set(xlabel='Epoch Number', ylabel='Loss', ylim=(0,3))
+
+axs[1, 0].plot(epochArray, learningRateArray)
+axs[1, 0].set_title("Epoch Number vs Learning Rate")
+axs[1, 0].set(xlabel='Epoch Number', ylabel='Learning Rate', ylim=(0,1))
+
+fig.tight_layout()
+
+plt.show()
+
+accuracyArray = np.zeros(testingTotalEpochNumber)
+lossArray = np.zeros(testingTotalEpochNumber)
+epochArray = np.zeros(testingTotalEpochNumber)
+
+print("Now for testing data!")
+
+for epoch in range(testingTotalEpochNumber):
+
+    currentX, currentY = testingX[epoch], testingY[epoch]
+
+    dense1.forwardPass(currentX)
+    activation1.f(dense1.output)
+
+    dense2.forwardPass(activation1.output)
+    activation2.f(dense2.output)
+
+    dense3.forwardPass(activation2.output)
+    activation3.f(dense3.output)
+
+    dense4.forwardPass(activation3.output)
+    loss = loss_activation.f(dense4.output, currentY)
+
+    predictions = np.argmax(loss_activation.output, axis=1)
+    
+    accuracy = np.mean(predictions == currentY)
+
+    accuracyArray[epoch] = accuracy
+    lossArray[epoch] = loss
+    learningRateArray[epoch] = optimizer.current_learning_rate
+    epochArray[epoch] = epoch
+
+    if (epoch % (showNumbersEpochInterval/10)) == 0:
+        print(f'TESTING: epoch: {epoch}, acc: {accuracy}, loss: {loss}')
+        #showPlot(currentX=currentX, currentY=currentY, currentOutput=loss_activation.output)
+
+fig, axs = plt.subplots(2)
+axs[0].plot(epochArray, accuracyArray)
+axs[0].set_title("Epoch Number vs Accuracy")
+axs[0].set(xlabel='Epoch Number', ylabel='Accuracy', ylim=(0,1.1))
+
+axs[1].plot(epochArray, lossArray)
+axs[1].set_title("Epoch Number vs Loss")
+axs[1].set(xlabel='Epoch Number', ylabel='Loss', ylim=(0,3))
+
+fig.tight_layout()
+
+plt.show()
