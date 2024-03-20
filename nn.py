@@ -225,7 +225,7 @@ def showPlot(currentX, currentY, currentOutput):
         plt.show()
 
 # Load Data From MNIST Dataset
-#(X, y), (test_X, test_y) = mnist.load_data()
+# (X, y), (test_X, test_y) = mnist.load_data()
 
 baseDimX, baseDimY = 60000, 784
 
