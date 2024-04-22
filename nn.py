@@ -221,7 +221,8 @@ class Optimizer_Adam:
 def showPlot(currentX, currentY, currentOutput):
     for x in range(min(5, batchSize)):
         plt.imshow((currentX[x]*255).reshape(28, 28), cmap='gray')
-        plt.title(f"Guess: {np.round(currentOutput[x],2)} Correct: {currentY[x]}")
+        #plt.title(f"Guess: {np.round(currentOutput[x],2)} Correct: {currentY[x]}")
+        plt.title(f"Input Number")
         plt.show()
 
 # Load Data From MNIST Dataset
@@ -368,7 +369,7 @@ for epoch in range(trainingTotalEpochNumber):
 
     if (epoch % showNumbersEpochInterval) == 0:
         print(f'epoch: {epoch}, acc: {accuracy}, loss: {loss}, lr: {optimizer.current_learning_rate}')
-        #showPlot(currentX=currentX, currentY=currentY, currentOutput=loss_activation.output)
+        showPlot(currentX=currentX, currentY=currentY, currentOutput=loss_activation.output)
 
 # Test Data
 
@@ -417,7 +418,6 @@ for epoch in range(testingTotalEpochNumber):
 
     accuracyArray[epoch] = accuracy
     lossArray[epoch] = loss
-    learningRateArray[epoch] = optimizer.current_learning_rate
     epochArray[epoch] = epoch
 
     if (epoch % (showNumbersEpochInterval/10)) == 0:
